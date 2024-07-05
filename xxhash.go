@@ -1,5 +1,5 @@
 // Package xxhash implements the 64-bit variant of xxHash (XXH64) as described
-// at http://cyan4973.github.io/xxHash/.
+// at https://xxhash.com/.
 package xxhash
 
 import (
@@ -16,21 +16,16 @@ const (
 	prime5 uint64 = 2870177450012600261
 )
 
-// NOTE(caleb): I'm using both consts and vars of the primes. Using consts where
-// possible in the Go code is worth a small (but measurable) performance boost
-// by avoiding some MOVQs. Vars are needed for the asm and also are useful for
-// convenience in the Go code in a few places where we need to intentionally
-// avoid constant arithmetic (e.g., v1 := prime1 + prime2 fails because the
-// result overflows a uint64).
-var (
-	prime1v = prime1
-	prime2v = prime2
-	prime3v = prime3
-	prime4v = prime4
-	prime5v = prime5
-)
+// Store the primes in an array as well.
+//
+// The consts are used when possible in Go code to avoid MOVs but we need a
+// contiguous array for the assembly code.
+var primes = [...]uint64{prime1, prime2, prime3, prime4, prime5}
 
 // Digest implements hash.Hash64.
+//
+// Note that a zero-valued Digest is not ready to receive writes.
+// Call Reset or create a Digest using New before calling other methods.
 type Digest struct {
 	v1    uint64
 	v2    uint64
@@ -41,19 +36,31 @@ type Digest struct {
 	n     int // how much of mem is used
 }
 
-// New creates a new Digest that computes the 64-bit xxHash algorithm.
+// New creates a new Digest with a zero seed.
 func New() *Digest {
+	return NewWithSeed(0)
+}
+
+// NewWithSeed creates a new Digest with the given seed.
+func NewWithSeed(seed uint64) *Digest {
 	var d Digest
-	d.Reset()
+	d.ResetWithSeed(seed)
 	return &d
 }
 
 // Reset clears the Digest's state so that it can be reused.
+// It uses a seed value of zero.
 func (d *Digest) Reset() {
-	d.v1 = prime1v + prime2
-	d.v2 = prime2
-	d.v3 = 0
-	d.v4 = -prime1v
+	d.ResetWithSeed(0)
+}
+
+// ResetWithSeed clears the Digest's state so that it can be reused.
+// It uses the given seed to initialize the state.
+func (d *Digest) ResetWithSeed(seed uint64) {
+	d.v1 = seed + prime1 + prime2
+	d.v2 = seed + prime2
+	d.v3 = seed
+	d.v4 = seed - prime1
 	d.total = 0
 	d.n = 0
 }

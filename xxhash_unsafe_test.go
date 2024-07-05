@@ -26,7 +26,7 @@ func TestStringAllocs(t *testing.T) {
 	})
 }
 
-// This test is inspired by the Go runtime tests in https://golang.org/cl/57410.
+// This test is inspired by the Go runtime tests in https://go.dev/cl/57410.
 // It asserts that certain important functions may be inlined.
 func TestInlining(t *testing.T) {
 	funcs := map[string]struct{}{
@@ -34,8 +34,6 @@ func TestInlining(t *testing.T) {
 		"(*Digest).WriteString": {},
 	}
 
-	// TODO: it would be better to use the go binary that is running
-	// 'go test' (if we are running under 'go test').
 	cmd := exec.Command("go", "test", "-gcflags=-m", "-run", "xxxx")
 	out, err := cmd.CombinedOutput()
 	if err != nil {
